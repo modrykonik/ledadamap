@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
+
+cledadamap = Extension('cledadamap', sources=['cledadamap.c'])
 
 setup(
     name = "ledadamap",
     version = "0.1",
     packages = find_packages(),
     scripts = [],
+    ext_modules = [cledadamap],
 
     install_requires = [],
 
