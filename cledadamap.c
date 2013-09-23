@@ -89,11 +89,12 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 	Bucket *bucket0 = self->bucket0;
 	register Bucket *bucket;
 
-	if (! PyArg_ParseTuple(args, "O", &name)) {
+	if (! PyArg_ParseTuple(args, "S", &name)) {
 		return NULL;
 	}
 
 	name_str = PyString_AsString(name);
+
 	mask = self->num_buckets - 1;
 	long hash = PyObject_Hash(name);
 	idx = (size_t)hash & mask;
@@ -121,6 +122,22 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 }
 
 
+static PyObject *Lrm_uget(LrmObject *self, PyObject *args) {
+	register PyObject *result;
+
+	result = Lrm_get(self, args);
+	if (result == NULL) {
+		return NULL;
+	}
+
+	if (result == Py_None) {
+		return result;
+	}
+
+	return PyString_AsDecodedObject(result, "utf8", NULL);
+}
+
+
 static PyMemberDef Lrm_members[] = {
 	{NULL}
 };
@@ -128,6 +145,7 @@ static PyMemberDef Lrm_members[] = {
 
 static PyMethodDef Lrm_methods[] = {
 	{"get", (PyCFunction)Lrm_get, METH_VARARGS, "Return value by key, otherwise None if not found"},
+	{"uget", (PyCFunction)Lrm_uget, METH_VARARGS, "Return value by key (as unicode object), otherwise None if not found"},
     {NULL}
 };
 
