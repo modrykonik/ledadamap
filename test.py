@@ -8,6 +8,7 @@ from cledadamap import LedadaReadMap
 
 
 FILENAME = 'bench_output.leda'
+ITEMS = 100000
 
 
 def nice_duration(seconds):
@@ -24,7 +25,6 @@ def nice_duration(seconds):
 
 
 def gen_map():
-    ITEMS = 100000
     dct = {}
     for i in range(ITEMS):
         dct['key{0}'.format(i)] = 'value{0}'.format(i)
@@ -38,22 +38,29 @@ def main():
     gen_map()
     map1 = LedadaReadMap(FILENAME)
 
-    RUNS = 100000
+    RUNS = 1
 
     # print map1.get(b'key152')
+    # print map1.get(b'key0')
+    # print map1.get(b'key8')
+    # print map1.get(b'key832554')
     # return
 
-    items = range(RUNS) * 50
+    import itertools
+    one_run = xrange(ITEMS)
+    items = itertools.chain(*([one_run] * RUNS))
 
     # ledadamap, sequential keys
     start = time.time()
     for i in items:
         key = b'key%d' % i
         value = map1.get(key)
-        # if value != 'value%d' % i:
-        #     print "Wrong value for key '%s'" % key
+        if value != 'value%d' % i:
+            print "Wrong value for key '%s'" % key
+            print value
     end = time.time()
-    loop_duration = (end - start) / len(items)
+    len_items = ITEMS * RUNS
+    loop_duration = (end - start) / len_items
     print nice_duration(loop_duration)
 
 
