@@ -15,8 +15,7 @@ class LedadaGen(object):
         self._dict = {}
         self.buckets = []
         self.payload = ''
-        self.key_pointers = []
-        self.value_pointers = []
+        self.chunk_pointers = []
 
     def from_dict(self, dct):
         self._dict = dct
@@ -46,8 +45,6 @@ class LedadaGen(object):
             key = self._to_utf('key', key)
 
             idx = hash(key) & (num_buckets - 1)
-            perturb = abs(hash(key))
-
             perturb = hash(key)
             if perturb < 0:
                 perturb += 2 ** 64
@@ -69,24 +66,20 @@ class LedadaGen(object):
 
     def _prepare_payload(self):
         header_size = 8
-        buckets_size = len(self.buckets) * 8
+        buckets_size = len(self.buckets) * 4
         offset = header_size + buckets_size
         payload_items = []
-        self.key_pointers = [0] * len(self.buckets)
-        self.value_pointers = [0] * len(self.buckets)
+        self.chunk_pointers = [0] * len(self.buckets)
         for idx, bucket in enumerate(self.buckets):
             if not bucket:
                 continue
 
-            self.key_pointers[idx] = offset
-            payload_items.append(struct.pack('H', len(bucket[0])))
-            payload_items.append(bucket[0])
-            offset += 2 + len(bucket[0])
-
-            self.value_pointers[idx] = offset
-            payload_items.append(struct.pack('H', len(bucket[1])))
-            payload_items.append(bucket[1])
-            offset += 2 + len(bucket[1])
+            key, value = bucket
+            self.chunk_pointers[idx] = offset
+            payload_items.append(struct.pack('HH', len(key), len(value)))
+            payload_items.append(key)
+            payload_items.append(value)
+            offset += 4 + len(key) + len(value)
 
         self.payload = ''.join(payload_items)
 
@@ -99,7 +92,7 @@ class LedadaGen(object):
         data = ['LEDA']
         data.append(struct.pack('I', len(self.buckets)))
         for idx, bucket in enumerate(self.buckets):
-            data.append(struct.pack('II', self.key_pointers[idx], self.value_pointers[idx]))
+            data.append(struct.pack('I', self.chunk_pointers[idx]))
         data.append(self.payload)
         datastr = ''.join(data)
         PAGESIZE = 4096
