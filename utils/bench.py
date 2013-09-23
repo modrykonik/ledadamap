@@ -4,6 +4,7 @@
 import time
 from ledadagen import LedadaGen
 from ledadamap import LedadaReadMap
+from cledadamap import LedadaReadMap as cLedadaReadMap
 
 
 FILENAME = 'bench_output.leda'
@@ -35,9 +36,11 @@ def gen_map():
 
 def main():
     gen_map()
-    map1 = LedadaReadMap(FILENAME)
 
     RUNS = 100000
+
+
+    map1 = LedadaReadMap(FILENAME)
 
     # ledadamap, sequential keys
     start = time.time()
@@ -58,6 +61,30 @@ def main():
     dct = {}
     for i in range(RUNS):
         dct[b'key%d' % i] = b'value%d' % i
+
+
+    map1 = cLedadaReadMap(FILENAME)
+
+    # cledadamap, sequential keys
+    start = time.time()
+    for i in range(RUNS):
+        map1.get(b'key%d' % i)
+    end = time.time()
+    loop_duration = (end - start) / RUNS
+    print nice_duration(loop_duration)
+
+    # cledadamap, static non-existing key
+    start = time.time()
+    for i in range(RUNS):
+        map1.get(b'key785875858')
+    end = time.time()
+    loop_duration = (end - start) / RUNS
+    print nice_duration(loop_duration)
+
+    dct = {}
+    for i in range(RUNS):
+        dct[b'key%d' % i] = b'value%d' % i
+
 
     # python dict, sequential keys
     start = time.time()
