@@ -10,7 +10,7 @@ setup(
     #packages = find_packages(),
     scripts = [],
     ext_modules = [cledadamap],
-    py_modules = ['ledadamap'],
+    py_modules = ['ledadagen', 'ledadamap'],
 
     install_requires = [],
 
