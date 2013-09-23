@@ -22,6 +22,7 @@ typedef struct {
 
 typedef struct {
 	PyObject_HEAD
+	size_t size;
 	char *buf;
 	int num_buckets;
 	Bucket *bucket0;
@@ -30,6 +31,7 @@ typedef struct {
 
 
 static void Lrm_dealloc(LrmObject *self) {
+	munmap(self->buf, self->size);
 	self->ob_type->tp_free((PyObject *)self);
 }
 
@@ -39,6 +41,8 @@ static PyObject *Lrm_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 	self = (LrmObject *)type->tp_alloc(type, 0);
 	if (self != NULL) {
+		self->size = 0;
+		self->buf = NULL;
 		self->num_buckets = 0;
 		self->bucket0 = NULL;
 		self->payload = NULL;
@@ -62,11 +66,10 @@ static int Lrm_init(LrmObject *self, PyObject *args, PyObject *kwds) {
 		return -1;
 	}
 
-	off_t size;
-	size = lseek(fd, 0, SEEK_END);
-
-	self->buf = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+	self->size = lseek(fd, 0, SEEK_END);
+	self->buf = mmap(NULL, self->size, PROT_READ, MAP_SHARED, fd, 0);
 	if (self->buf == MAP_FAILED) {
+		close(fd);
 		PyErr_SetString(PyExc_OSError, "Can't create mmap.");
 		return -1;
 	}
