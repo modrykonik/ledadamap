@@ -5,13 +5,19 @@
 
 
 #define PERTURB_SHIFT	5
-#define BUCKET_SIZE		8
+#define BUCKET_SIZE		4
 
 
 typedef struct {
-	uint32_t key_pointer;
-	uint32_t value_pointer;
+	uint32_t chunk_pointer;
 } Bucket;
+
+
+typedef struct {
+	uint16_t key_len;
+	uint16_t value_len;
+	char data;
+} Chunk;
 
 
 typedef struct {
@@ -98,21 +104,23 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 	mask = self->num_buckets - 1;
 	long hash = PyObject_Hash(name);
 	idx = (size_t)hash & mask;
-
 	perturb = hash;
 
 	while (1) {
 		bucket = &bucket0[idx];
-		if (bucket->key_pointer == 0) {
+		if (bucket->chunk_pointer == 0) {
 			Py_INCREF(Py_None);
 			return Py_None;
 		}
 
-		uint16_t len;
-		memcpy(&len, self->buf + bucket->key_pointer, 2);
-		if (strncmp(self->buf + bucket->key_pointer + 2, name_str, len) == 0) {
-			memcpy(&len, self->buf + bucket->value_pointer, 2);
-			return PyString_FromStringAndSize(self->buf + bucket->value_pointer + 2, len);
+		register Py_ssize_t name_size;
+		register Chunk *chunk;
+
+		name_size = PyString_GET_SIZE(name);
+		chunk = (Chunk *)(self->buf + bucket->chunk_pointer);
+
+		if ((name_size == chunk->key_len) && (strncmp(&chunk->data, name_str, chunk->key_len) == 0)) {
+			return PyString_FromStringAndSize(&chunk->data + chunk->key_len, chunk->value_len);
 		}
 
 		idx = (idx << 2) + idx + perturb + 1;
