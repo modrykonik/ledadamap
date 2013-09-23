@@ -95,10 +95,12 @@ class LedadaGen(object):
             data.append(struct.pack('I', self.chunk_pointers[idx]))
         data.append(self.payload)
         datastr = ''.join(data)
-        PAGESIZE = 4096
-        paddinglen = (PAGESIZE - (len(datastr) % PAGESIZE)) % PAGESIZE
         fileobj.write(''.join(datastr))
-        fileobj.write('\x00' * paddinglen)
+        PAGESIZE = 4096
+        tailsize = len(datastr) & (PAGESIZE - 1)
+        if tailsize:
+            paddinglen = PAGESIZE - tailsize
+            fileobj.write('\x00' * paddinglen)
         fileobj.flush()
 
 
