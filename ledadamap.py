@@ -19,27 +19,28 @@ class LedadaReadMap(object):
             raise ValueError('Incorrect file format.')
         self.num_buckets = struct.unpack_from('I', self.buf, 4)[0]
         self.buckets_start = 8
-        self.payload_start = self.buckets_start + self.num_buckets * 8
-
-    def _grab_string(self, pointer):
-        size = struct.unpack_from('H', self.buf, pointer)[0]
-        return struct.unpack_from('%ds' % size, self.buf, pointer + 2)[0]
+        self.payload_start = self.buckets_start + self.num_buckets * 4
 
     def get(self, name, default=None):
         if isinstance(name, unicode):
           name = name.encode('utf8')
+
         hash_ = hash(name)
-
         idx = hash_ & (self.num_buckets - 1)
-        j = idx
-        perturb = abs(hash_)
-        while True:
-            key_pointer, value_pointer = struct.unpack_from('II', self.buf, self.buckets_start + idx * 8)
-            if not key_pointer:
-                return default
-            if self._grab_string(key_pointer) == name:
-                return self._grab_string(value_pointer)
+        perturb = hash_
+        if perturb < 0:
+            perturb += 2 ** 64
 
-            j = (5 * j) + 1 + perturb
+        while True:
+            chunk_pointer = struct.unpack_from('I', self.buf, self.buckets_start + idx * 4)[0]
+            if not chunk_pointer:
+                return default
+
+            key_len, value_len = struct.unpack_from('HH', self.buf, chunk_pointer)
+            key = struct.unpack_from('%ds' % key_len, self.buf, chunk_pointer + 4)[0]
+            if key == name:
+                return struct.unpack_from('%ds' % value_len, self.buf, chunk_pointer + 4 + key_len)[0]
+
+            idx = (5 * idx) + 1 + perturb
             perturb >>= PERTURB_SHIFT
-            idx = j & (self.num_buckets - 1)
+            idx &= (self.num_buckets - 1)
