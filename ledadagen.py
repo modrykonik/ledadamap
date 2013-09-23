@@ -46,8 +46,12 @@ class LedadaGen(object):
             key = self._to_utf('key', key)
 
             idx = hash(key) & (num_buckets - 1)
-            j = idx
             perturb = abs(hash(key))
+
+            perturb = hash(key)
+            if perturb < 0:
+                perturb += 2 ** 64
+
             while True:
                 bucket = self.buckets[idx]
                 if bucket is None:
@@ -55,9 +59,9 @@ class LedadaGen(object):
 
                 collisions += 1
 
-                j = (5 * j) + 1 + perturb
+                idx = (5 * idx) + 1 + perturb
                 perturb >>= PERTURB_SHIFT
-                idx = j & (num_buckets - 1)
+                idx &= (num_buckets - 1)
 
             bucket = (key, value)
             self.buckets[idx] = bucket
