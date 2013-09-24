@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import math
+import mmap
+import os
+import random
 import struct
 
 
@@ -103,14 +106,46 @@ class LedadaGen(object):
             fileobj.write('\x00' * paddinglen)
         fileobj.flush()
 
+    def overwrite_with_switch(self, filepath):
+        while True:
+            temp_filepath = '{0}.{1}'.format(filepath, random.randint(100000, 999999))
+            try:
+                fd = os.open(temp_filepath, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+            except OSError as exc:
+                if exc.errno == 17:     # 17 = file exists
+                    continue
+                raise
+            break
+        fileobj = os.fdopen(fd, 'wb')
+        self.write_to_file(fileobj)
+
+        buf = None
+        try:
+            oldfd = os.open(filepath, os.O_RDWR)
+        except OSError as exc:
+            if exc.errno != 2:          # 2 = no such file
+                raise
+            oldfd = None
+        else:
+            buf = mmap.mmap(oldfd, mmap.PAGESIZE, mmap.MAP_SHARED, mmap.PROT_READ | mmap.PROT_WRITE)
+            os.close(oldfd)
+
+        os.rename(temp_filepath, filepath)
+
+        if buf:
+            buf[3] = 'D'
+            buf.flush()
+            buf.close()
+
 
 if __name__ == '__main__':
     # dct = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3', 'key4': 'value4'}
 
     dct = {}
-    for i in range(100000):
+    for i in range(10):
         dct['key{0}'.format(i)] = 'value{0}'.format(i)
 
     gen = LedadaGen()
     gen.from_dict(dct)
-    gen.write_to_file(open('test_output.leda', 'wb'))
+    # gen.write_to_file(open('test_output.leda', 'wb'))
+    gen.overwrite_with_switch('test_output.leda')
