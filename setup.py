@@ -6,7 +6,7 @@ cledadamap = Extension('cledadamap', sources=['cledadamap.c'])
 
 setup(
     name = "ledadamap",
-    version = "0.1",
+    version = "0.2",
     #packages = find_packages(),
     scripts = [],
     ext_modules = [cledadamap],
