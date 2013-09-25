@@ -30,6 +30,9 @@ typedef struct {
 } LrmObject;
 
 
+static PyObject *DirtyError;
+
+
 static void Lrm_dealloc(LrmObject *self) {
 	munmap(self->buf, self->size);
 	self->ob_type->tp_free((PyObject *)self);
@@ -76,6 +79,11 @@ static int Lrm_init(LrmObject *self, PyObject *args, PyObject *kwds) {
 
 	close(fd);
 
+	if (strncmp(self->buf, "LEDD", 4) == 0) {
+		PyErr_SetString(DirtyError, "File is dirty.");
+		return -1;
+	}
+
 	if (strncmp(self->buf, "LEDA", 4) != 0) {
 		PyErr_SetString(PyExc_ValueError, "Incorrect file format.");
 		return -1;
@@ -99,6 +107,11 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 	register Bucket *bucket;
 
 	if (! PyArg_ParseTuple(args, "S", &name)) {
+		return NULL;
+	}
+
+	if (self->buf[3] == 'D') {
+		PyErr_SetString(DirtyError, "File is dirty.");
 		return NULL;
 	}
 
@@ -213,6 +226,12 @@ PyMODINIT_FUNC initcledadamap() {
 
     module = Py_InitModule3("cledadamap", Lrm_methods,
     	"Shared memory read-only hash map.");
+    if (module == NULL)
+    	return;
+
+    DirtyError = PyErr_NewException("cledadamap.DirtyError", NULL, NULL);
+    Py_INCREF(DirtyError);
+    PyModule_AddObject(module, "DirtyError", DirtyError);
 
     Py_INCREF(&LrmType);
     PyModule_AddObject(module, "LedadaReadMap", (PyObject *)&LrmType);
