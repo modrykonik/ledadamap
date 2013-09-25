@@ -105,12 +105,14 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 	register size_t mask;
 	Bucket *bucket0 = self->bucket0;
 	register Bucket *bucket;
+	register volatile char *vbuf;
 
 	if (! PyArg_ParseTuple(args, "S", &name)) {
 		return NULL;
 	}
 
-	if (self->buf[3] == 'D') {
+	vbuf = self->buf;
+	if (vbuf[3] == 'D') {
 		PyErr_SetString(DirtyError, "File is dirty.");
 		return NULL;
 	}
