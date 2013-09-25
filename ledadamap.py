@@ -9,12 +9,18 @@ import struct
 PERTURB_SHIFT = 5
 
 
+class DirtyError(Exception):
+    pass
+
+
 class LedadaReadMap(object):
 
     def __init__(self, filepath):
         fd = os.open(filepath, os.O_RDONLY)
         self.buf = mmap.mmap(fd, 0, mmap.MAP_SHARED, mmap.PROT_READ)
         os.close(fd)
+        if self.buf[:4] == 'LEDD':
+            raise DirtyError('File is dirty.')
         if self.buf[:4] != 'LEDA':
             raise ValueError('Incorrect file format.')
         self.num_buckets = struct.unpack_from('I', self.buf, 4)[0]
@@ -22,8 +28,11 @@ class LedadaReadMap(object):
         self.payload_start = self.buckets_start + self.num_buckets * 4
 
     def get(self, name, default=None):
+        if self.buf[3] == 'D':
+            raise DirtyError('File is dirty.')
+
         if isinstance(name, unicode):
-          name = name.encode('utf8')
+            name = name.encode('utf8')
 
         hash_ = hash(name)
         idx = hash_ & (self.num_buckets - 1)
