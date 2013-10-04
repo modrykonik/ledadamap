@@ -1,12 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import ctypes
 import mmap
 import os
 import struct
 
 
 PERTURB_SHIFT = 5
+
+
+def stable_hash(str_value):
+    if not str_value:
+        return 0
+    x = ord(str_value[0]) << 7
+    for c in str_value:
+        x = ctypes.c_long(1000003 * x).value
+        x ^= ord(c)
+
+    x ^= len(str_value)
+    return x
 
 
 class DirtyError(Exception):
@@ -34,7 +47,7 @@ class LedadaReadMap(object):
         if isinstance(name, unicode):
             name = name.encode('utf8')
 
-        hash_ = hash(name)
+        hash_ = stable_hash(name)
         idx = hash_ & (self.num_buckets - 1)
         perturb = hash_
         if perturb < 0:

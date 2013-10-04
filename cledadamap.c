@@ -33,6 +33,36 @@ typedef struct {
 static PyObject *DirtyError;
 
 
+static long string_hash(PyStringObject *a) {
+    register Py_ssize_t len;
+    register unsigned char *p;
+    register long x;
+
+    len = Py_SIZE(a);
+    if (len == 0) {
+        return 0;
+    }
+    p = (unsigned char *)a->ob_sval;
+    x = *p << 7;
+    while (--len >= 0) {
+        x = (1000003 * x) ^ *p++;
+    }
+    x ^= Py_SIZE(a);
+    return x;
+}
+
+
+static PyObject *stable_hash(PyObject *self, PyObject *args) {
+    PyStringObject *string;
+
+    if (! PyArg_ParseTuple(args, "S", &string))
+        return NULL;
+
+	long hash = string_hash(string);
+    return Py_BuildValue("l", hash);
+}
+
+
 static void Lrm_dealloc(LrmObject *self) {
 	munmap(self->buf, self->size);
 	self->ob_type->tp_free((PyObject *)self);
@@ -120,7 +150,7 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
 	name_str = PyString_AsString(name);
 
 	mask = self->num_buckets - 1;
-	long hash = PyObject_Hash(name);
+	long hash = string_hash((PyStringObject *)name);
 	idx = (size_t)hash & mask;
 	perturb = hash;
 
@@ -176,6 +206,12 @@ static PyMethodDef Lrm_methods[] = {
 };
 
 
+static PyMethodDef Module_methods[] = {
+	{"stable_hash", (PyCFunction)stable_hash, METH_VARARGS, "Return stable hash (without randomization) for given string"},
+	{NULL}
+};
+
+
 static PyTypeObject LrmType = {
 	PyObject_HEAD_INIT(NULL)
     0,                         		/*ob_size*/
@@ -226,7 +262,7 @@ PyMODINIT_FUNC initcledadamap() {
     if (PyType_Ready(&LrmType) < 0)
         return;
 
-    module = Py_InitModule3("cledadamap", Lrm_methods,
+    module = Py_InitModule3("cledadamap", Module_methods,
     	"Shared memory read-only hash map.");
     if (module == NULL)
     	return;

@@ -6,6 +6,7 @@ import mmap
 import os
 import random
 import struct
+import cledadamap
 
 
 PERTURB_SHIFT = 5
@@ -47,8 +48,9 @@ class LedadaGen(object):
             value = self._to_utf('value', self._dict[key])
             key = self._to_utf('key', key)
 
-            idx = hash(key) & (num_buckets - 1)
-            perturb = hash(key)
+            hash_ = cledadamap.stable_hash(key)
+            idx = hash_ & (num_buckets - 1)
+            perturb = hash_
             if perturb < 0:
                 perturb += 2 ** 64
 
