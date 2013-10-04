@@ -71,13 +71,13 @@ static int Lrm_init(LrmObject *self, PyObject *args, PyObject *kwds) {
 
 	self->size = lseek(fd, 0, SEEK_END);
 	self->buf = mmap(NULL, self->size, PROT_READ, MAP_SHARED, fd, 0);
+
+	close(fd);
+
 	if (self->buf == MAP_FAILED) {
-		close(fd);
 		PyErr_SetString(PyExc_OSError, "Can't create mmap.");
 		return -1;
 	}
-
-	close(fd);
 
 	if (strncmp(self->buf, "LEDD", 4) == 0) {
 		PyErr_SetString(DirtyError, "File is dirty.");
