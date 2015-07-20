@@ -1,8 +1,12 @@
+
+/*
+Based on a significant portion of CPython's dictobject code.
+*/
+
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <Python.h>
 #include "structmember.h"
-
 
 #define PERTURB_SHIFT    5
 #define BUCKET_SIZE      4
