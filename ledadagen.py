@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 import math
 import mmap
 import os
@@ -32,7 +33,7 @@ class LedadaGen(object):
         return value
 
     def _fill_buckets(self):
-        print len(self._dict), 'items'
+        logging.debug('{0} items'.format(len(self._dict)))
         value = len(self._dict) * OVERSIZE_FACTOR
         shift = 0
         while value > 0:
@@ -40,7 +41,7 @@ class LedadaGen(object):
             shift += 1
 
         num_buckets = 1 << shift
-        print num_buckets, 'buckets'
+        logging.debug('{0} buckets'.format(num_buckets))
         self.buckets = [None] * num_buckets
 
         collisions = 0
@@ -67,7 +68,7 @@ class LedadaGen(object):
 
             bucket = (key, value)
             self.buckets[idx] = bucket
-        print collisions, 'collisions'
+        logging.debug('{0} collisions'.format(collisions))
 
     def _prepare_payload(self):
         header_size = 8
