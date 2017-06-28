@@ -6,11 +6,13 @@ import mmap
 import os
 import struct
 
+import six
+
 
 PERTURB_SHIFT = 5
 
 
-def stable_hash(str_value):
+def stable_hash_py2(str_value):
     if not str_value:
         return 0
     x = ord(str_value[0]) << 7
@@ -20,6 +22,21 @@ def stable_hash(str_value):
 
     x ^= len(str_value)
     return x
+
+
+def stable_hash_py3(str_value):
+    if not str_value:
+        return 0
+    x = str_value[0] << 7
+    for c in str_value:
+        x = ctypes.c_long(1000003 * x).value
+        x ^= c
+
+    x ^= len(str_value)
+    return x
+
+
+stable_hash = stable_hash_py3 if six.PY3 else stable_hash_py2
 
 
 class DirtyError(Exception):
@@ -32,9 +49,9 @@ class LedadaReadMap(object):
         fd = os.open(filepath, os.O_RDONLY)
         self.buf = mmap.mmap(fd, 0, mmap.MAP_SHARED, mmap.PROT_READ)
         os.close(fd)
-        if self.buf[:4] == 'LEDD':
+        if self.buf[:4] == b'LEDD':
             raise DirtyError('File is dirty.')
-        if self.buf[:4] != 'LEDA':
+        if self.buf[:4] != b'LEDA':
             raise ValueError('Incorrect file format.')
         self.num_buckets = struct.unpack_from('I', self.buf, 4)[0]
         self.buckets_start = 8
@@ -44,7 +61,7 @@ class LedadaReadMap(object):
         if self.buf[3] == 'D':
             raise DirtyError('File is dirty.')
 
-        if isinstance(name, unicode):
+        if isinstance(name, six.text_type):
             name = name.encode('utf8')
 
         hash_ = stable_hash(name)
@@ -66,3 +83,9 @@ class LedadaReadMap(object):
             idx = (5 * idx) + 1 + perturb
             perturb >>= PERTURB_SHIFT
             idx &= (self.num_buckets - 1)
+
+    def uget(self, name, default=None):
+        result = self.get(name, default)
+        if result is None:
+            return None
+        return result.decode('utf8')

@@ -6,13 +6,15 @@ cledadamap = Extension('cledadamap', sources=['cledadamap.c'])
 
 setup(
     name = "ledadamap",
-    version = "0.2.3",
+    version = "0.2.4",
     #packages = find_packages(),
     scripts = [],
     ext_modules = [cledadamap],
     py_modules = ['ledadagen', 'ledadamap'],
 
-    install_requires = [],
+    install_requires = [
+        'six',
+    ],
 
     package_data = {
     },
