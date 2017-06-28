@@ -6,6 +6,7 @@ Based on a significant portion of CPython's dictobject code.
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <Python.h>
+#include "bytesobject.h"
 #include "structmember.h"
 
 #define PERTURB_SHIFT    5
@@ -37,7 +38,7 @@ typedef struct {
 static PyObject *DirtyError;
 
 
-static long string_hash(PyStringObject *a) {
+static long string_hash(PyBytesObject *a) {
     register Py_ssize_t len;
     register unsigned char *p;
     register long x;
@@ -57,7 +58,7 @@ static long string_hash(PyStringObject *a) {
 
 
 static PyObject *stable_hash(PyObject *self, PyObject *args) {
-    PyStringObject *string;
+    PyBytesObject *string;
 
     if (! PyArg_ParseTuple(args, "S", &string))
         return NULL;
@@ -69,7 +70,7 @@ static PyObject *stable_hash(PyObject *self, PyObject *args) {
 
 static void Lrm_dealloc(LrmObject *self) {
     munmap(self->buf, self->size);
-    self->ob_type->tp_free((PyObject *)self);
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 
@@ -151,10 +152,10 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
         return NULL;
     }
 
-    name_str = PyString_AsString(name);
+    name_str = PyBytes_AsString(name);
 
     mask = self->num_buckets - 1;
-    long hash = string_hash((PyStringObject *)name);
+    long hash = string_hash((PyBytesObject *)name);
     idx = (size_t)hash & mask;
     perturb = hash;
 
@@ -168,11 +169,11 @@ static PyObject *Lrm_get(LrmObject *self, PyObject *args) {
         register Py_ssize_t name_size;
         register Chunk *chunk;
 
-        name_size = PyString_GET_SIZE(name);
+        name_size = PyBytes_GET_SIZE(name);
         chunk = (Chunk *)(self->buf + bucket->chunk_pointer);
 
         if ((name_size == chunk->key_len) && (strncmp(&chunk->data, name_str, chunk->key_len) == 0)) {
-            return PyString_FromStringAndSize(&chunk->data + chunk->key_len, chunk->value_len);
+            return PyBytes_FromStringAndSize(&chunk->data + chunk->key_len, chunk->value_len);
         }
 
         idx = (idx << 2) + idx + perturb + 1;
@@ -194,7 +195,7 @@ static PyObject *Lrm_uget(LrmObject *self, PyObject *args) {
         return result;
     }
 
-    return PyString_AsDecodedObject(result, "utf8", NULL);
+    return PyUnicode_FromEncodedObject(result, "utf8", NULL);
 }
 
 
@@ -217,8 +218,7 @@ static PyMethodDef Module_methods[] = {
 
 
 static PyTypeObject LrmType = {
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
+    PyVarObject_HEAD_INIT(NULL, 0)
     "cledadamap.LedadaReadMap",     /*tp_name*/
     sizeof(LrmObject),              /*tp_basicsize*/
     0,                              /*tp_itemsize*/
@@ -259,17 +259,36 @@ static PyTypeObject LrmType = {
 };
 
 
-PyMODINIT_FUNC initcledadamap() {
+#if PY_MAJOR_VERSION >= 3
+    static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "cledadamap",                           /* m_name */
+        "Shared memory read-only hash map.",    /* m_doc */
+        -1,                                     /* m_size */
+        Module_methods,                         /* m_methods */
+        NULL,                                   /* m_reload */
+        NULL,                                   /* m_traverse */
+        NULL,                                   /* m_clear */
+        NULL,                                   /* m_free */
+    };
+#endif
+
+
+static PyObject *moduleinit() {
     PyObject *module;
 
     LrmType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&LrmType) < 0)
-        return;
+        return NULL;
 
+#if PY_MAJOR_VERSION >= 3
+    module = PyModule_Create(&moduledef);
+#else
     module = Py_InitModule3("cledadamap", Module_methods,
         "Shared memory read-only hash map.");
+#endif
     if (module == NULL)
-        return;
+        return NULL;
 
     DirtyError = PyErr_NewException("cledadamap.DirtyError", NULL, NULL);
     Py_INCREF(DirtyError);
@@ -277,11 +296,17 @@ PyMODINIT_FUNC initcledadamap() {
 
     Py_INCREF(&LrmType);
     PyModule_AddObject(module, "LedadaReadMap", (PyObject *)&LrmType);
+
+    return module;
 }
 
 
-int main(int argc, char *argv[]) {
-    Py_SetProgramName(argv[0]);
-    Py_Initialize();
-    initcledadamap();
-}
+#if PY_MAJOR_VERSION < 3
+    PyMODINIT_FUNC initcledadamap() {
+        moduleinit();
+    }
+#else
+    PyMODINIT_FUNC PyInit_cledadamap() {
+        return moduleinit();
+    }
+#endif
