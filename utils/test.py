@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from six.moves import range
 import time
 from ledadagen import LedadaGen
 # from ledadamap import LedadaReadMap
@@ -47,7 +48,7 @@ def main():
     # return
 
     import itertools
-    one_run = xrange(ITEMS)
+    one_run = range(ITEMS)
     items = itertools.chain(*([one_run] * RUNS))
 
     # ledadamap, sequential keys
@@ -55,13 +56,13 @@ def main():
     for i in items:
         key = b'key%d' % i
         value = map1.get(key)
-        if value != 'value%d' % i:
-            print "Wrong value for key '%s'" % key
-            print value
+        if value != b'value%d' % i:
+            print("Wrong value for key '%s'" % key)
+            print(value)
     end = time.time()
     len_items = ITEMS * RUNS
     loop_duration = (end - start) / len_items
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
 
 main()

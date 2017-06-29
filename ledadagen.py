@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import math
 import mmap
 import os
 import random
+import six
 import struct
 import cledadamap
 
@@ -19,16 +19,16 @@ class LedadaGen(object):
     def __init__(self):
         self._dict = {}
         self.buckets = []
-        self.payload = ''
+        self.payload = b''
         self.chunk_pointers = []
 
     def from_dict(self, dct):
         self._dict = dct
 
     def _to_utf(self, what, value):
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             value = value.encode('utf8')
-        elif not isinstance(value, str):
+        elif not isinstance(value, six.binary_type):
             raise TypeError('{0} needs to be a string or unicode.'.format(what))
         return value
 
@@ -87,7 +87,7 @@ class LedadaGen(object):
             payload_items.append(value)
             offset += 4 + len(key) + len(value)
 
-        self.payload = ''.join(payload_items)
+        self.payload = b''.join(payload_items)
 
     def write_to_file(self, fileobj):
         self._fill_buckets()
@@ -95,18 +95,18 @@ class LedadaGen(object):
 
         fileobj.seek(0)
         fileobj.truncate()
-        data = ['LEDA']
+        data = [b'LEDA']
         data.append(struct.pack('I', len(self.buckets)))
         for idx, bucket in enumerate(self.buckets):
             data.append(struct.pack('I', self.chunk_pointers[idx]))
         data.append(self.payload)
-        datastr = ''.join(data)
-        fileobj.write(''.join(datastr))
+        datastr = b''.join(data)
+        fileobj.write(datastr)
         PAGESIZE = 4096
         tailsize = len(datastr) & (PAGESIZE - 1)
         if tailsize:
             paddinglen = PAGESIZE - tailsize
-            fileobj.write('\x00' * paddinglen)
+            fileobj.write(b'\x00' * paddinglen)
         fileobj.flush()
 
     def overwrite_with_switch(self, filepath):
