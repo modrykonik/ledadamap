@@ -48,7 +48,7 @@ def main():
         map1.get(b'key%d' % i)
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
     # ledadamap, static non-existing key
     start = time.time()
@@ -56,7 +56,7 @@ def main():
         map1.get(b'key785875858')
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
     dct = {}
     for i in range(RUNS):
@@ -71,7 +71,7 @@ def main():
         map1.get(b'key%d' % i)
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
     # cledadamap, static non-existing key
     start = time.time()
@@ -79,7 +79,7 @@ def main():
         map1.get(b'key785875858')
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
     dct = {}
     for i in range(RUNS):
@@ -92,7 +92,7 @@ def main():
         dct.get(b'key%d' % i)
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
     # python dict, static non-existing key
     start = time.time()
@@ -100,7 +100,7 @@ def main():
         dct.get(b'key785875858')
     end = time.time()
     loop_duration = (end - start) / RUNS
-    print nice_duration(loop_duration)
+    print(nice_duration(loop_duration))
 
 
 main()
